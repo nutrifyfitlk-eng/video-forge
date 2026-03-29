@@ -12,6 +12,22 @@ export default function App() {
   const [variants, setVariants] = useState<VideoAd[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [videoCount, setVideoCount] = useState(73);
+  const [isOnline, setIsOnline] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        setIsOnline(data.status === 'ok' || data.status === 'online');
+      } catch (error) {
+        setIsOnline(false);
+      }
+    };
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleFormSubmit = async (data: BusinessFormData) => {
     setIsLoading(true);
@@ -84,6 +100,7 @@ export default function App() {
           onSubmit={handleFormSubmit} 
           isLoading={isLoading} 
           videoCount={videoCount} 
+          isOnline={isOnline}
         />
       )}
       

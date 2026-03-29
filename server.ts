@@ -7,7 +7,7 @@ import axios from "axios";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { VariantsSchema } from "./src/types.ts";
 
-const REMOTION_API_BASE = "http://34.225.138.109:3004";
+const REMOTION_API_BASE = "http://34.225.138.109:3005";
 
 async function startServer() {
   const app = express();
@@ -16,6 +16,16 @@ async function startServer() {
   app.use(express.json());
 
   // API Routes
+  app.get("/api/health", async (req, res) => {
+    try {
+      const response = await axios.get(`${REMOTION_API_BASE}/health`, { timeout: 5000 });
+      res.json(response.data);
+    } catch (error: any) {
+      console.error("Health Check Error:", error.message);
+      res.status(503).json({ status: "offline", error: "Render API is unreachable" });
+    }
+  });
+
   app.post("/api/generate", async (req, res) => {
     try {
       const apiKey = process.env.GEMINI_API_KEY;

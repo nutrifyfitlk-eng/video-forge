@@ -15,9 +15,10 @@ interface FormProps {
   onSubmit: (data: BusinessFormData) => void;
   isLoading: boolean;
   videoCount: number;
+  isOnline: boolean | null;
 }
 
-export default function BusinessForm({ onSubmit, isLoading, videoCount }: FormProps) {
+export default function BusinessForm({ onSubmit, isLoading, videoCount, isOnline }: FormProps) {
   const [formData, setFormData] = useState<BusinessFormData>({
     businessName: '',
     niche: 'Fitness',
@@ -61,9 +62,9 @@ export default function BusinessForm({ onSubmit, isLoading, videoCount }: FormPr
           Vision<span className="text-accent-primary">Forge</span>
         </h1>
         <p className="text-xl text-text-muted mb-2">AI Video Ads in 90 Seconds</p>
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-bg-surface border border-border-subtle rounded-full text-xs font-medium text-accent-primary">
-          <span className="w-2 h-2 bg-accent-primary rounded-full animate-pulse"></span>
-          Powered by GeniuzLab AI · Empire Server Online ✅
+        <div className={`inline-flex items-center gap-2 px-3 py-1 bg-bg-surface border border-border-subtle rounded-full text-xs font-medium ${isOnline === false ? 'text-red-500' : 'text-accent-primary'}`}>
+          <span className={`w-2 h-2 rounded-full ${isOnline === false ? 'bg-red-500' : 'bg-accent-primary animate-pulse'}`}></span>
+          {isOnline === null ? 'Checking Server Status...' : isOnline ? 'Powered by GeniuzLab AI · Empire Server Online ✅' : 'Empire Server Offline ❌'}
         </div>
       </div>
 
@@ -235,13 +236,17 @@ export default function BusinessForm({ onSubmit, isLoading, videoCount }: FormPr
 
         <button
           type="submit"
-          disabled={isLoading}
-          className="w-full bg-accent-primary text-bg-primary font-bold py-4 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+          disabled={isLoading || isOnline === false}
+          className="w-full bg-accent-primary text-bg-primary font-bold py-4 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
               Processing with Gemini...
+            </>
+          ) : isOnline === false ? (
+            <>
+              Server Offline - Try again later
             </>
           ) : (
             <>
