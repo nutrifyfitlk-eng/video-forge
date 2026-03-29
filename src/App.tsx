@@ -476,7 +476,331 @@ export default function App() {
             </pre>
           </details>
         )}
+// src/lib/masterPrompt.ts — VisionForge Master Prompt Engine
+// Controls everything Gemini generates
 
+export interface MasterPromptConfig {
+  copyFramework: 'AIDA' | 'PAS' | 'BAB' | 'HOOK_STORY_OFFER';
+  visualStyle: 'bold' | 'cinematic' | 'minimal' | 'neon' | 'luxury';
+  audiencePsychographic: 'achiever' | 'struggler' | 'skeptic' | 'aspirational';
+  urgencyLevel: 'low' | 'medium' | 'high' | 'extreme';
+  proofType: 'numbers' | 'testimonial' | 'celebrity' | 'guarantee';
+}
+
+export const DEFAULT_MASTER_CONFIG: MasterPromptConfig = {
+  copyFramework: 'HOOK_STORY_OFFER',
+  visualStyle: 'bold',
+  audiencePsychographic: 'achiever',
+  urgencyLevel: 'high',
+  proofType: 'numbers',
+};
+
+const COPY_FRAMEWORKS = {
+  AIDA: `Use the AIDA framework:
+- HOOK: Grab Attention with a bold, unexpected statement
+- PROBLEM: Build Interest by describing their exact pain
+- SOLUTION: Create Desire by showing the transformation
+- PROOF: Reinforce with evidence
+- CTA: Drive Action with urgency`,
+
+  PAS: `Use the PAS framework:
+- HOOK: State the Problem immediately — hit the pain point hard
+- PROBLEM: Agitate — make them feel the pain deeper
+- SOLUTION: Present the Solution as the only logical answer
+- PROOF: Validate with numbers/testimonials
+- CTA: Close with urgency`,
+
+  BAB: `Use the BAB (Before-After-Bridge) framework:
+- HOOK: Show the BEFORE state — their current painful reality
+- PROBLEM: Deepen the before — make it visceral
+- SOLUTION: Paint the AFTER — the transformation
+- PROOF: Bridge with evidence of others who made it
+- CTA: Be the bridge — take action now`,
+
+  HOOK_STORY_OFFER: `Use the Hook-Story-Offer framework:
+- HOOK: Pattern interrupt — say something they've never heard
+- PROBLEM: Tell THEIR story — make them feel seen
+- SOLUTION: Introduce the hero (your product) naturally
+- PROOF: Show the story outcome with real numbers
+- CTA: Make an irresistible offer with deadline`,
+};
+
+const VISUAL_STYLES = {
+  bold: `Visual direction: Maximum contrast. Heavy typography. Bold colors. No subtlety.
+- Use high-contrast color combinations
+- Headlines should be SHORT (3-5 words max for HOOK)
+- Emojis should be high-energy: 💥🔥⚡💪🚀`,
+
+  cinematic: `Visual direction: Film-quality. Dramatic. Emotional. Premium feel.
+- Use deep, rich colors with subtle gradients
+- Headlines can be longer, more poetic
+- Emojis should be dramatic: 🎬✨🌟💫🎯`,
+
+  minimal: `Visual direction: Clean. White space. Typography-led. Apple-style.
+- Use minimal colors — one primary, white, black
+- Headlines should be elegant and precise
+- Emojis should be refined: ◆ → ✓ ★`,
+
+  neon: `Visual direction: Electric. Night-mode. Cyberpunk energy.
+- Use neon colors: electric blue, hot pink, acid green
+- Headlines should feel futuristic
+- Emojis: 🌐⚡🔮💎🎮`,
+
+  luxury: `Visual direction: Premium. Exclusive. Aspirational. Gold accents.
+- Use deep navy, black, gold, champagne
+- Headlines should feel exclusive and rare
+- Emojis: 👑💎🥂✨🏆`,
+};
+
+const PSYCHOGRAPHIC_TARGETING = {
+  achiever: `Target psychographic: HIGH ACHIEVER
+- They want to WIN, not just improve
+- Speak to their ambition and competitive nature
+- Pain: they're not reaching their potential
+- Desire: to be the best version of themselves
+- Language: "dominate", "elite", "peak", "transform", "results"`,
+
+  struggler: `Target psychographic: THE STRUGGLER
+- They've tried before and failed
+- They're skeptical but desperate for a solution
+- Pain: embarrassment, frustration, wasted money
+- Desire: finally find something that works
+- Language: "finally", "actually works", "no more", "real results", "guaranteed"`,
+
+  skeptic: `Target psychographic: THE SKEPTIC
+- They don't believe the hype
+- Lead with proof, not promises
+- Pain: being misled by false claims
+- Desire: a trustworthy, evidence-based solution
+- Language: "proven", "science-backed", "data shows", "thousands verified"`,
+
+  aspirational: `Target psychographic: THE ASPIRATIONAL
+- They dream of a better life
+- They respond to transformation stories
+- Pain: gap between where they are and where they want to be
+- Desire: to become the person they imagine
+- Language: "imagine", "transform", "become", "your best life", "possible"`,
+};
+
+const URGENCY_SYSTEMS = {
+  low: `Urgency: Gentle encouragement. No pressure.`,
+  medium: `Urgency: Time-sensitive offer. "This week only" energy.`,
+  high: `Urgency: Scarcity + deadline. "Limited spots" + specific number.`,
+  extreme: `Urgency: MAXIMUM scarcity. Countdown energy. "Closing tonight" level.
+- Use specific numbers: "Only 47 spots left"
+- Add time pressure: "Offer expires in 24 hours"
+- Social proof urgency: "312 people viewing this right now"`,
+};
+
+const PROOF_SYSTEMS = {
+  numbers: `Proof type: HARD NUMBERS. Specific statistics beat vague claims.
+- Use exact figures: "10,847 members" not "thousands"
+- Transformation metrics: "Lost 8.3kg in 6 weeks on average"
+- Growth stats: "97% of users see results in 30 days"`,
+
+  testimonial: `Proof type: TESTIMONIAL. One powerful quote beats ten statistics.
+- Make it specific and personal
+- Include a transformation detail
+- Name + result: "Sarah M. lost 18kg in 12 weeks"`,
+
+  celebrity: `Proof type: AUTHORITY. Expert or celebrity endorsement energy.
+- Reference credibility markers
+- "As seen in", "Recommended by", "Used by elite athletes"`,
+
+  guarantee: `Proof type: GUARANTEE. Remove all risk.
+- Bold guarantee statement
+- "30-day money back, no questions asked"
+- "If you don't see results, we pay you"`,
+};
+
+export function buildMasterPrompt(
+  brief: {
+    businessName: string;
+    product: string;
+    targetAudience: string;
+    keyBenefit: string;
+    tone: string;
+    website: string;
+    primaryColor: string;
+  },
+  config: MasterPromptConfig = DEFAULT_MASTER_CONFIG
+): string {
+  return `You are the world's highest-paid video ad creative director. You have written ads that generated $100M+ in revenue. You understand human psychology, persuasion, and visual storytelling at the deepest level.
+
+Your task: Generate a VideoAdProps JSON for a 30-second video ad (900 frames, 30fps).
+
+═══════════════════════════════════════
+BUSINESS BRIEF
+═══════════════════════════════════════
+Business: ${brief.businessName}
+Product: ${brief.product}
+Target Audience: ${brief.targetAudience}
+Key Benefit: ${brief.keyBenefit}
+Tone: ${brief.tone}
+Website: ${brief.website}
+Primary Color: ${brief.primaryColor}
+
+═══════════════════════════════════════
+MASTER CREATIVE DIRECTION
+═══════════════════════════════════════
+
+${COPY_FRAMEWORKS[config.copyFramework]}
+
+${VISUAL_STYLES[config.visualStyle]}
+
+${PSYCHOGRAPHIC_TARGETING[config.audiencePsychographic]}
+
+${URGENCY_SYSTEMS[config.urgencyLevel]}
+
+${PROOF_SYSTEMS[config.proofType]}
+
+═══════════════════════════════════════
+SCENE-BY-SCENE RULES
+═══════════════════════════════════════
+
+HOOK (frames 0-90, 3 seconds):
+- Headline: MAX 5 WORDS. Must create instant curiosity or shock.
+- Subtext: One line that deepens the hook
+- This is the scroll-stopper. Make it impossible to ignore.
+
+PROBLEM (frames 90-270, 6 seconds):
+- Headline: Name the pain directly
+- Subtext: Use pipe | to separate 3 pain points (renders as bullet list)
+- Make them feel SEEN. They should think "this is about me"
+
+SOLUTION (frames 270-540, 9 seconds):
+- Headline: The product name + transformation promise
+- Subtext: Use pipe | to separate 3 key features/benefits
+- This is the pivot from pain to hope
+
+PROOF (frames 540-720, 6 seconds):
+- Headline: Your single most impressive stat or result
+- Subtext: One powerful testimonial quote (no pipes)
+- Make it specific. Specific = believable.
+
+CTA (frames 720-900, 6 seconds):
+- Headline: Action verb + benefit (e.g. "Start Free Today")
+- This is the close. Create urgency. Remove friction.
+
+═══════════════════════════════════════
+ANIMATION STYLE MAPPING
+═══════════════════════════════════════
+- HOOK: "zoom" (commands attention)
+- PROBLEM: "slide" (builds momentum)
+- SOLUTION: "zoom" (reveals with impact)
+- PROOF: "fade" (credibility, not hype)
+- CTA: "bounce" (energy, urgency)
+
+═══════════════════════════════════════
+COLOR PSYCHOLOGY RULES
+═══════════════════════════════════════
+- HOOK: Use primary color (brand recognition)
+- PROBLEM: Always use dark (#1a1a2e) — darkness = pain
+- SOLUTION: Use primary color — return to brand = hope
+- PROOF: Always use near-black (#0d1117) — authority
+- CTA: Use accent color — contrast = action
+
+═══════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════
+Return ONLY valid JSON. No markdown. No explanation. No code fences.
+Exact structure required:
+
+{
+  "videoMeta": {
+    "businessName": "${brief.businessName}",
+    "adType": "product",
+    "duration": 900,
+    "fps": 30,
+    "format": "reel"
+  },
+  "brand": {
+    "primaryColor": "${brief.primaryColor}",
+    "secondaryColor": "#1a1a2e",
+    "accentColor": "[complementary accent — high contrast with primary]",
+    "fontFamily": "system-ui, sans-serif",
+    "tone": "${brief.tone}"
+  },
+  "scenes": [
+    {
+      "type": "HOOK",
+      "startFrame": 0,
+      "endFrame": 90,
+      "headline": "[5 words max — scroll-stopping hook]",
+      "subtext": "[one line deepening the hook]",
+      "visualDescription": "[what appears on screen]",
+      "backgroundColor": "${brief.primaryColor}",
+      "textColor": "#ffffff",
+      "accentColor": "[high contrast accent]",
+      "animationStyle": "zoom",
+      "emoji": "[psychology-matched emoji]"
+    },
+    {
+      "type": "PROBLEM",
+      "startFrame": 90,
+      "endFrame": 270,
+      "headline": "[pain point headline]",
+      "subtext": "[pain point 1]|[pain point 2]|[pain point 3]",
+      "visualDescription": "[problem visualization]",
+      "backgroundColor": "#1a1a2e",
+      "textColor": "#ffffff",
+      "accentColor": "#ff4757",
+      "animationStyle": "slide",
+      "emoji": "[frustration emoji]"
+    },
+    {
+      "type": "SOLUTION",
+      "startFrame": 270,
+      "endFrame": 540,
+      "headline": "${brief.businessName} — [transformation promise]",
+      "subtext": "[benefit 1]|[benefit 2]|[benefit 3]",
+      "visualDescription": "[solution visualization]",
+      "backgroundColor": "${brief.primaryColor}",
+      "textColor": "#ffffff",
+      "accentColor": "[accent color]",
+      "animationStyle": "zoom",
+      "emoji": "[solution/tech emoji]"
+    },
+    {
+      "type": "PROOF",
+      "startFrame": 540,
+      "endFrame": 720,
+      "headline": "[specific impressive stat]",
+      "subtext": "[one powerful testimonial quote]",
+      "visualDescription": "[proof visualization]",
+      "backgroundColor": "#0d1117",
+      "textColor": "#ffffff",
+      "accentColor": "#ffd700",
+      "animationStyle": "fade",
+      "emoji": "🏆"
+    },
+    {
+      "type": "CTA",
+      "startFrame": 720,
+      "endFrame": 900,
+      "headline": "[action verb + benefit]",
+      "subtext": "[friction-removing subtext]",
+      "visualDescription": "[CTA screen]",
+      "backgroundColor": "[accent color for maximum contrast]",
+      "textColor": "#ffffff",
+      "accentColor": "#ffd700",
+      "animationStyle": "bounce",
+      "emoji": "🚀"
+    }
+  ],
+  "audio": {
+    "musicMood": "${config.visualStyle === 'luxury' ? 'cinematic' : config.visualStyle === 'minimal' ? 'ambient' : 'energetic'}",
+    "hasVoiceover": false,
+    "voiceoverScript": ""
+  },
+  "cta": {
+    "text": "[primary CTA button text]",
+    "subtext": "[secondary line removing friction]",
+    "urgency": "[scarcity/urgency line — specific]",
+    "website": "${brief.website}"
+  }
+}`;
+}
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 48, color: '#444', fontSize: 12 }}>
           VisionForge by GeniuzLab · Powered by Gemini + Remotion · {new Date().getFullYear()}
