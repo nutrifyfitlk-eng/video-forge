@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, CheckCircle2, Download, Copy, Plus, Server } from 'lucide-react';
+import { Loader2, CheckCircle2, Download, Copy, Plus, Server, Settings2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface RenderProgressProps {
@@ -19,6 +19,7 @@ export default function RenderProgress({ jobId, onNew }: RenderProgressProps) {
   const [status, setStatus] = useState<any>(null);
   const [msgIdx, setMsgIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [quality, setQuality] = useState<'Low' | 'Medium' | 'High'>('High');
 
   useEffect(() => {
     const msgInterval = setInterval(() => {
@@ -53,6 +54,30 @@ export default function RenderProgress({ jobId, onNew }: RenderProgressProps) {
     if (status?.outputUrl) {
       navigator.clipboard.writeText(status.outputUrl);
       alert("Link copied to clipboard!");
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!status?.outputUrl) return;
+    
+    try {
+      // Attempt to fetch as blob for forced download
+      const response = await fetch(status.outputUrl);
+      if (!response.ok) throw new Error('Network response was not ok');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `visionforge-ad-${jobId}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+      // Fallback: open in new tab if blob download fails (e.g. CORS)
+      window.open(status.outputUrl, '_blank');
     }
   };
 
@@ -105,24 +130,42 @@ export default function RenderProgress({ jobId, onNew }: RenderProgressProps) {
 
           <h2 className="text-4xl font-bold">Video Forged!</h2>
           
-          <div className="aspect-[9/16] max-w-[300px] mx-auto bg-bg-surface rounded-2xl border border-border-subtle overflow-hidden shadow-2xl">
-            <video
-              src={status.outputUrl}
-              controls
-              autoPlay
-              className="w-full h-full object-cover"
-            />
+          <div className="flex flex-col gap-4 max-w-[300px] mx-auto">
+            <div className="flex items-center justify-between px-4 py-2 bg-bg-surface border border-border-subtle rounded-xl">
+              <div className="flex items-center gap-2 text-sm text-text-muted">
+                <Settings2 className="w-4 h-4" />
+                Preview
+              </div>
+              <select 
+                value={quality}
+                onChange={(e) => setQuality(e.target.value as any)}
+                className="bg-transparent text-sm font-bold text-accent-primary focus:outline-none cursor-pointer"
+              >
+                <option value="Low" className="bg-bg-primary">480p</option>
+                <option value="Medium" className="bg-bg-primary">720p</option>
+                <option value="High" className="bg-bg-primary">1080p</option>
+              </select>
+            </div>
+
+            <div className="aspect-[9/16] w-full bg-bg-surface rounded-2xl border border-border-subtle overflow-hidden shadow-2xl">
+              <video
+                key={quality} // Force re-render on quality change
+                src={`${status.outputUrl}${status.outputUrl.includes('?') ? '&' : '?'}quality=${quality.toLowerCase()}`}
+                controls
+                autoPlay
+                className="w-full h-full object-cover"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <a
-              href={status.outputUrl}
-              download
+            <button
+              onClick={handleDownload}
               className="flex items-center justify-center gap-2 bg-accent-primary text-bg-primary font-bold py-4 rounded-full hover:scale-[1.02] transition-all"
             >
               <Download className="w-5 h-5" />
               Download MP4
-            </a>
+            </button>
             <button
               onClick={copyToClipboard}
               className="flex items-center justify-center gap-2 bg-bg-surface border border-border-subtle font-bold py-4 rounded-full hover:border-accent-primary transition-all"

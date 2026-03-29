@@ -7,7 +7,7 @@ import axios from "axios";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { VariantsSchema } from "./src/types.ts";
 
-const REMOTION_API_BASE = "http://34.225.138.109:3005";
+const REMOTION_API_BASE = process.env.NEXT_PUBLIC_RENDER_API || "http://34.225.138.109:3005";
 
 async function startServer() {
   const app = express();
