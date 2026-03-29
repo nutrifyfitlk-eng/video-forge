@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Key } from 'lucide-react';
 import BusinessForm from './components/Form';
 import VariantsDisplay from './components/Variants';
 import RenderProgress from './components/RenderProgress';
@@ -13,6 +14,24 @@ export default function App() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [videoCount, setVideoCount] = useState(73);
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
+  const [hasKey, setHasKey] = useState<boolean>(true);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio?.hasSelectedApiKey) {
+        const selected = await window.aistudio.hasSelectedApiKey();
+        setHasKey(selected);
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleOpenKeyDialog = async () => {
+    if (window.aistudio?.openSelectKey) {
+      await window.aistudio.openSelectKey();
+      setHasKey(true);
+    }
+  };
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -40,6 +59,11 @@ export default function App() {
       const result = await res.json();
       
       if (!res.ok) {
+        if (res.status === 401 || result.error?.includes("Requested entity was not found")) {
+          setHasKey(false);
+          await handleOpenKeyDialog();
+          throw new Error("API Key was invalid or missing. Please try again after selecting a valid key.");
+        }
         throw new Error(result.error || 'Failed to generate variants');
       }
 
@@ -94,7 +118,26 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-primary text-text-primary selection:bg-accent-primary selection:text-bg-primary">
+    <div className="min-h-screen bg-bg-primary text-text-primary selection:bg-accent-primary selection:text-bg-primary relative">
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        {!hasKey && (
+          <span className="text-[10px] bg-destructive/20 text-destructive px-2 py-1 rounded-full font-bold uppercase tracking-wider animate-pulse">
+            API Key Required
+          </span>
+        )}
+        <button
+          onClick={handleOpenKeyDialog}
+          className={`p-2 rounded-full border transition-all ${
+            hasKey 
+              ? 'border-border-subtle bg-bg-surface hover:border-accent-primary text-text-muted hover:text-accent-primary' 
+              : 'border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20'
+          }`}
+          title="Set Gemini API Key"
+        >
+          <Key className="w-4 h-4" />
+        </button>
+      </div>
+
       {view === 'form' && (
         <BusinessForm 
           onSubmit={handleFormSubmit} 

@@ -61,7 +61,7 @@ export default function RenderProgress({ jobId, onNew }: RenderProgressProps) {
     if (!status?.outputUrl) return;
     
     try {
-      // Attempt to fetch as blob for forced download
+      // Attempt to fetch as blob for forced download with proper naming
       const response = await fetch(status.outputUrl);
       if (!response.ok) throw new Error('Network response was not ok');
       
@@ -69,7 +69,11 @@ export default function RenderProgress({ jobId, onNew }: RenderProgressProps) {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `visionforge-ad-${jobId}.mp4`;
+      
+      // Use a more descriptive filename
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `VisionForge_Ad_${timestamp}.mp4`;
+      
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -77,7 +81,11 @@ export default function RenderProgress({ jobId, onNew }: RenderProgressProps) {
     } catch (err) {
       console.error("Download error:", err);
       // Fallback: open in new tab if blob download fails (e.g. CORS)
-      window.open(status.outputUrl, '_blank');
+      const link = document.createElement('a');
+      link.href = status.outputUrl;
+      link.target = '_blank';
+      link.download = 'visionforge-video.mp4';
+      link.click();
     }
   };
 
