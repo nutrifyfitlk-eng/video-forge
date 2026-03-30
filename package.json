@@ -23,6 +23,7 @@
     "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "remotion": "^4.0.441",
     "vite": "^6.2.0",
     "zod": "^4.3.6",
     "zod-to-json-schema": "^3.25.2"

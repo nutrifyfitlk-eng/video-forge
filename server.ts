@@ -47,6 +47,7 @@ RULES:
 - Headlines: max 8 words, punchy, pattern-interrupt
 - Subtext: max 15 words, specific, benefit-focused
 - Colors: valid hex codes only
+- logoAnimation: FADE_IN (for TRUST/LUXURY), SLIDE_DOWN (for BOLD/URGENT), SCALE_UP (for ENERGETIC), or NONE
 - GRADIENT backgroundValue: valid CSS gradient string
 - COLOR backgroundValue: valid hex code
 - VIDEO backgroundValue: empty string (user provides footage)

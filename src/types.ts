@@ -15,6 +15,7 @@ export const SceneSchema = z.object({
   textPosition: z.enum(['TOP', 'CENTER', 'BOTTOM']),
   hasLogo: z.boolean(),
   logoPosition: z.enum(['TOP_LEFT', 'TOP_RIGHT', 'BOTTOM_CENTER']),
+  logoAnimation: z.enum(['FADE_IN', 'SLIDE_DOWN', 'SCALE_UP', 'NONE']),
 });
 
 export const VideoAdSchema = z.object({
